@@ -4,6 +4,34 @@
 
 All documents are **synthetic and deterministic** (seeded generator included), so the entire pipeline runs offline with zero confidential data.
 
+## The production system this replicates
+
+The enterprise ESG SCA (Supplier Compliance Audit) processing project ran on the Microsoft stack:
+
+1. Supplier audit PDF is **uploaded through SharePoint**
+2. A **Copilot Studio** (Power Automate) flow reads the file content
+3. **Azure Document Intelligence** extracts readable text and table content from the PDF
+4. An **AI Builder prompt** classifies whether the file is a valid audit report
+5. An **AI Builder prompt** identifies the assessor (UL, Intertek, Sedex…) and audit type
+6. The flow **routes to the matching extraction prompt** per audit type (UL / Intertek / Sedex / generic)
+7. An **AI Builder prompt** extracts audit details and findings into **structured JSON**
+8. An **AI Builder confidence prompt** validates and scores the extracted JSON
+9. A **Databricks notebook (Python/PySpark)** transforms the final JSON and writes it into **multiple tables** as required
+10. The structured output feeds **downstream reporting, tracking, and Power BI**
+
+This repo mirrors each stage with open, runnable code, so the architecture can be reviewed end-to-end:
+
+| Production stage (Copilot Studio + Databricks) | This repo's open replica |
+|---|---|
+| SharePoint upload → flow trigger | `scripts/generate_samples.py` (synthetic audit PDFs) |
+| Azure Document Intelligence text/table extraction | `PyPdfExtractor` + `AzureDocIntelligenceExtractor` (same `DocumentExtractor` protocol) |
+| AI Builder validity/classification prompts (steps 4-5) | `normalize_extraction` validation gate — rejects non-audit documents with all-errors-at-once reporting |
+| Audit-type routing to per-assessor prompts (step 6) | Protocol-based extractor design — per-assessor parsing drops in without pipeline changes |
+| Structured JSON extraction (step 7) | Typed frozen `SupplierAudit` domain model |
+| Confidence scoring of extracted JSON (step 8) | Round-trip verification: extracted audits asserted **equal to ground truth** in tests (12/12 exact matches) |
+| Databricks PySpark transforms → multi-table writes (step 9) | `SqliteAuditRepository` multi-table persistence (audit / risk_score / corrective_action), contract-tested round-trip |
+| Power BI reporting (step 10) | Streamlit + plotly dashboard on the exported JSON |
+
 ## Dashboard
 
 ![ESG Supplier Risk Dashboard](docs/dashboard.png)
