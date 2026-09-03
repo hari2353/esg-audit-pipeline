@@ -4,6 +4,12 @@
 
 All documents are **synthetic and deterministic** (seeded generator included), so the entire pipeline runs offline with zero confidential data.
 
+## Dashboard
+
+![ESG Supplier Risk Dashboard](docs/dashboard.png)
+
+*Run it yourself: `streamlit run scripts/dashboard.py -- data/results.json` (after `pip install -e .[dashboard]` and generating results).*
+
 ## What it does
 
 ```
