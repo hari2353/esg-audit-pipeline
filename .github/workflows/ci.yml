@@ -33,11 +33,4 @@ jobs:
         run: |
           python scripts/generate_samples.py --count 5 --out data/samples --seed 42
           python scripts/run_pipeline.py --samples data/samples --db data/audit.db --json data/results.json
-          python -c "
-          import json
-          from pathlib import Path
-          results = json.loads(Path('data/results.json').read_text())
-          assert len(results) == 5, f'expected 5 results, got {len(results)}'
-          assert all(r['risk']['band'] in {'low','medium','high','critical'} for r in results)
-          print('end-to-end check passed:', len(results), 'audits processed')
-          "
+          python scripts/verify_pipeline.py
