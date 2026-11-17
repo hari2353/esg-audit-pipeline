@@ -59,14 +59,13 @@ def test_entries_are_ordered_by_audit_date_not_input_order():
 
 def test_audit_summary_is_frozen():
     entry = AuditSummary(audit_date=date(2026, 1, 1), total=50.0, band="medium")
-    with pytest.raises(Exception):
+    with pytest.raises((AttributeError, TypeError)):
         entry.total = 99.0  # type: ignore[misc]
 
 
 def test_repository_keeps_audit_history():
     from esg_pipeline.capa import InMemoryAuditRepository, SqliteAuditRepository
     from esg_pipeline.trend import portfolio_trends
-
     from tests.test_repository_contract import _record
 
     repo = SqliteAuditRepository(":memory:")
@@ -74,6 +73,7 @@ def test_repository_keeps_audit_history():
     repo.save(first)
     second = _record("SUP-1")
     from dataclasses import replace
+
     from esg_pipeline.models import RiskBand as Band
 
     worse = replace(second.audit, audit_date=date(2026, 8, 1))

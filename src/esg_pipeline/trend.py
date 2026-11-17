@@ -8,10 +8,11 @@ delta is improving. A supplier with fewer than two audits has NO trend —
 a single point cannot define one, and inventing 'stable' would be a
 fabrication.
 """
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Protocol
 
-from esg_pipeline.models import AuditSummary
+from esg_pipeline.models import AuditSummary, SupplierRiskRecord
 
 STABLE_EPSILON = 1.0
 
@@ -45,16 +46,18 @@ def supplier_trend(summaries) -> TrendScorecard | None:
     )
 
 
-class _HistoryRepository(Protocol):
+class _TrendRepository(Protocol):
     def history(self, supplier_id: str) -> tuple[AuditSummary, ...]: ...
 
+    def all_records(self) -> Sequence[SupplierRiskRecord]: ...
 
-def portfolio_trends(repository: _HistoryRepository) -> dict[str, TrendScorecard]:
+
+def portfolio_trends(repository: _TrendRepository) -> dict[str, TrendScorecard]:
     """Trends for every supplier that has at least two audits."""
-    # repositories expose all_records for the supplier list
     out: dict[str, TrendScorecard] = {}
-    for record in getattr(repository, "all_records")():
-        trend = supplier_trend(repository.history(record.audit.supplier_id))
+    for record in repository.all_records():
+        supplier_id = record.audit.supplier_id
+        trend = supplier_trend(repository.history(supplier_id))
         if trend is not None:
-            out[record.audit.supplier_id] = trend
+            out[supplier_id] = trend
     return out

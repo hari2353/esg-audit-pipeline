@@ -8,7 +8,6 @@ from datetime import date, datetime
 
 import pytest
 
-from esg_pipeline.capa import CapaPlanner, CapaPolicy
 from esg_pipeline.capa_lifecycle import mark_resolved, start, verify
 from esg_pipeline.models import (
     CorrectiveAction,
@@ -91,8 +90,10 @@ def test_transitions_refuse_impossible_states():
 
 
 def test_progress_entries_are_frozen_records():
+    import dataclasses
+
     entry = ProgressEntry(kind="note", note="waiting on contractor", at=CLOCK.now_datetime())
-    with pytest.raises(Exception):
+    with pytest.raises(dataclasses.FrozenInstanceError):
         entry.note = "changed"  # type: ignore[misc]
 
 

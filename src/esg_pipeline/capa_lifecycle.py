@@ -37,7 +37,7 @@ def start(action: CorrectiveAction, *, note: str, clock: Clock) -> CorrectiveAct
         raise ValueError(msg)
     entry = ProgressEntry(kind="started", note=note, at=clock.now_datetime())
     return replace(action, status=CorrectiveActionStatus.IN_PROGRESS,
-                   progress_log=action.progress_log + (entry,))
+                   progress_log=(*action.progress_log, entry))
 
 
 def record_progress(action: CorrectiveAction, *, note: str, clock: Clock) -> CorrectiveAction:
@@ -46,7 +46,7 @@ def record_progress(action: CorrectiveAction, *, note: str, clock: Clock) -> Cor
         msg = f"progress can only be recorded on an in_progress CAPA, got {action.status.value}"
         raise ValueError(msg)
     entry = ProgressEntry(kind="note", note=note, at=clock.now_datetime())
-    return replace(action, progress_log=action.progress_log + (entry,))
+    return replace(action, progress_log=(*action.progress_log, entry))
 
 
 def mark_resolved(action: CorrectiveAction, *, note: str, clock: Clock) -> CorrectiveAction:
@@ -59,7 +59,7 @@ def mark_resolved(action: CorrectiveAction, *, note: str, clock: Clock) -> Corre
         raise ValueError(msg)
     entry = ProgressEntry(kind="resolved", note=note, at=clock.now_datetime())
     return replace(action, status=CorrectiveActionStatus.RESOLVED,
-                   progress_log=action.progress_log + (entry,),
+                   progress_log=(*action.progress_log, entry),
                    resolved_at=clock.now_datetime())
 
 
@@ -85,8 +85,8 @@ def verify(
     if outcome == "verified":
         entry = ProgressEntry(kind="verified", note=note, at=at)
         return replace(action, status=CorrectiveActionStatus.VERIFIED,
-                       progress_log=action.progress_log + (entry,),
+                       progress_log=(*action.progress_log, entry),
                        verified_at=at)
     entry = ProgressEntry(kind="rejected", note=note, at=at)
     return replace(action, status=CorrectiveActionStatus.IN_PROGRESS,
-                   progress_log=action.progress_log + (entry,))
+                   progress_log=(*action.progress_log, entry))
