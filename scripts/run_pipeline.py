@@ -11,6 +11,7 @@ otherwise the offline pypdf extractor is used.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 from datetime import datetime, timezone
 from pathlib import Path
@@ -42,6 +43,8 @@ def main() -> None:
     parser.add_argument("--samples", type=Path, default=Path("data/samples"))
     parser.add_argument("--db", type=Path, default=Path("data/audit.db"))
     parser.add_argument("--json", type=Path, default=Path("data/results.json"))
+    parser.add_argument("--insights", type=Path, default=Path("data/insights.json"),
+                        help="alerts + trends payload for the dashboard")
     parser.add_argument("--memory", action="store_true", help="skip persistence (dry run)")
     args = parser.parse_args()
 
@@ -64,6 +67,16 @@ def main() -> None:
     exporter = JsonReportExporter(args.json)
     exporter.export([r.record for r in results])
 
+    from esg_pipeline.alerts import build_insights
+
+    insights = build_insights(
+        repository,
+        [r.record for r in results],
+        today=datetime.now(tz=timezone.utc).date(),
+    )
+    args.insights.parent.mkdir(parents=True, exist_ok=True)
+    args.insights.write_text(json.dumps(insights, indent=2, default=str))
+
     monitor = DefaultPortfolioMonitor()
     summary = monitor.summarize([r.record for r in results])
 
@@ -79,37 +92,28 @@ def main() -> None:
     print(f"Bands                  : {summary.band_counts}")
     print(f"Open CAPAs             : {summary.open_capas} ({summary.overdue_capas} overdue)")
     print(f"Top risk categories    : {summary.top_risk_categories}")
+    if summary.suppliers_requiring_attention:
+        print(f"Needs attention         : {', '.join(summary.suppliers_requiring_attention)}")
 
-    # Supplier trends (EcoVadis-style scorecards) — suppliers with >=2 audits
-    from esg_pipeline.trend import portfolio_trends
-
-    trends = portfolio_trends(repository)
+    # Insights (from the same payload the dashboard reads)
+    trends = insights["trends"]
     if trends:
         print()
         print("== Supplier Trends ==")
         for supplier_id, trend in sorted(
-            trends.items(), key=lambda kv: -kv[1].delta
+            trends.items(), key=lambda kv: -kv[1]["delta"]
         )[:5]:
             print(
-                f"{supplier_id}: {trend.previous.band} -> {trend.latest.band}"
-                f" ({trend.direction}, delta {trend.delta:+.1f})"
+                f"{supplier_id}: {trend['previous']['band']} ->"
+                f" {trend['latest']['band']}"
+                f" ({trend['direction']}, delta {trend['delta']:+.1f})"
             )
-
-    # Alerts (Avetta-style triggers) — deterministic, one per condition
-    from esg_pipeline.alerts import evaluate_alerts
-
-    alerts = evaluate_alerts(
-        [r.record for r in results],
-        today=datetime.now(tz=timezone.utc).date(),
-        history_repo=repository,
-    )
-    if alerts:
+    if insights["alerts"]:
         print()
         print("== Alerts ==")
-        order = {"critical": 0, "warning": 1, "info": 2}
-        for alert in sorted(alerts, key=lambda a: order[a.severity]):
-            print(f"[{alert.severity.upper():8}] {alert.supplier_id}: {alert.detail}")
-    print(f"Needs attention        : {summary.suppliers_requiring_attention}")
+        for alert in insights["alerts"]:
+            print(f"[{alert['severity'].upper():8}] {alert['supplier_id']}: {alert['detail']}")
+    print(f"Insights JSON : {args.insights}")
 
     if failed:
         print()

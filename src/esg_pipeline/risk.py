@@ -145,3 +145,8 @@ def _band_for(cfg: ScoringConfig, total: float) -> RiskBand:
 def with_overrides(config: ScoringConfig, **changes: object) -> ScoringConfig:
     """Return a copy of `config` with given fields replaced (immutability helper)."""
     return replace(config, **changes)  # type: ignore[arg-type]
+
+
+# band severity order: later enum declaration = riskier. Consumers
+# (alerts) reuse this; unknown band strings rank lowest, never crash.
+BAND_RANK = {band.value: rank for rank, band in enumerate(RiskBand)}

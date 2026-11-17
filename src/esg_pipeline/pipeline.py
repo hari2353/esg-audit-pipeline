@@ -34,6 +34,15 @@ from esg_pipeline.risk import RiskScorer
 
 UNPARSED_SUPPLIER_NAME = "(unparsed document)"
 
+# terminal CAPA states: closed for good, excluded from open/overdue counts
+# and alerts. VERIFIED is the lifecycle's closure; CLOSED is the legacy
+# value stored by pre-lifecycle databases — both mean done.
+_TERMINAL_CAPA_STATES = (
+    CorrectiveActionStatus.VERIFIED,
+    CorrectiveActionStatus.CLOSED,
+)
+_TERMINAL_CAPA_VALUES = {state.value for state in _TERMINAL_CAPA_STATES}
+
 
 @dataclass(frozen=True, slots=True)
 class ProcessResult:
@@ -158,7 +167,7 @@ class DefaultPortfolioMonitor:
             if record.risk.band in (RiskBand.HIGH, RiskBand.CRITICAL):
                 attention.append(record.audit.supplier_id)
             for action in record.corrective_actions:
-                if action.status is not CorrectiveActionStatus.VERIFIED:
+                if action.status not in _TERMINAL_CAPA_STATES:
                     open_capas += 1
                     if action.due_date < self._today:
                         overdue += 1
@@ -189,7 +198,7 @@ class DefaultPortfolioMonitor:
             if band in (RiskBand.HIGH.value, RiskBand.CRITICAL.value):
                 attention.append(entry["supplier_id"])
             for action in entry["corrective_actions"]:
-                if action["status"] != CorrectiveActionStatus.VERIFIED.value:
+                if action["status"] not in _TERMINAL_CAPA_VALUES:
                     open_capas += 1
                     if date_type.fromisoformat(action["due_date"]) < self._today:
                         overdue += 1

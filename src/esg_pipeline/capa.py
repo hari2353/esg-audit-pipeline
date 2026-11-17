@@ -126,24 +126,28 @@ class InMemoryAuditRepository:
 
     def __init__(self) -> None:
         self._records: dict[str, SupplierRiskRecord] = {}
-        self._history: dict[str, list[AuditSummary]] = {}
+        self._history: dict[tuple[str, date], AuditSummary] = {}
 
     def save(self, record: SupplierRiskRecord) -> None:
         key = record.audit.supplier_id
         self._records[key] = record
-        self._history.setdefault(key, []).append(
-            AuditSummary(
-                audit_date=record.audit.audit_date,
-                total=record.risk.total,
-                band=record.risk.band.value,
-            )
+        # one point per (supplier, audit_date): re-saves update, never append
+        self._history[(key, record.audit.audit_date)] = AuditSummary(
+            audit_date=record.audit.audit_date,
+            total=record.risk.total,
+            band=record.risk.band.value,
         )
 
     def get(self, supplier_id: str) -> SupplierRiskRecord | None:
         return self._records.get(supplier_id)
 
     def history(self, supplier_id: str) -> tuple[AuditSummary, ...]:
-        return tuple(self._history.get(supplier_id, ()))
+        points = [
+            summary
+            for (sid, _), summary in self._history.items()
+            if sid == supplier_id
+        ]
+        return tuple(sorted(points, key=lambda s: s.audit_date))
 
     def all_records(self) -> Sequence[SupplierRiskRecord]:
         return tuple(self._records.values())
@@ -188,7 +192,8 @@ CREATE TABLE IF NOT EXISTS audit_history (
     total       REAL NOT NULL,
     band        TEXT NOT NULL
 );
-CREATE INDEX IF NOT EXISTS audit_history_supplier ON audit_history(supplier_id, audit_date);
+CREATE UNIQUE INDEX IF NOT EXISTS audit_history_point
+    ON audit_history(supplier_id, audit_date);
 CREATE TABLE IF NOT EXISTS processing_run (
     supplier_id TEXT PRIMARY KEY,
     source_file TEXT,
@@ -215,6 +220,16 @@ def _ensure_lifecycle_columns(connection: sqlite3.Connection) -> None:
     ):
         if column not in existing:
             connection.execute(f"ALTER TABLE corrective_action ADD COLUMN {column} {ddl}")
+    # audit_history: collapse any duplicate points (keep the latest), then
+    # enforce one point per (supplier, audit_date)
+    connection.execute(
+        "DELETE FROM audit_history WHERE rowid NOT IN"
+        " (SELECT max(rowid) FROM audit_history GROUP BY supplier_id, audit_date)"
+    )
+    connection.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS audit_history_point"
+        " ON audit_history(supplier_id, audit_date)"
+    )
 
 
 @dataclass
@@ -323,9 +338,14 @@ class SqliteAuditRepository:
                         ca.verified_at.isoformat() if ca.verified_at else None,
                     ),
                 )
+            # one point per (supplier, audit_date): re-saving an evolved
+            # record (the CAPA lifecycle's own workflow) updates the point,
+            # it never appends a phantom one
             self.connection.execute(
                 "INSERT INTO audit_history(supplier_id, audit_date, total, band)"
-                " VALUES(?,?,?,?)",
+                " VALUES(?,?,?,?)"
+                " ON CONFLICT(supplier_id, audit_date) DO UPDATE SET"
+                "  total=excluded.total, band=excluded.band",
                 (a.supplier_id, a.audit_date.isoformat(), record.risk.total,
                  record.risk.band.value),
             )

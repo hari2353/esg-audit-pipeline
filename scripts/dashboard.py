@@ -87,7 +87,7 @@ def main() -> None:
                 "findings": len(r["findings"]),
                 "open_capas": sum(
                     1 for c in r["corrective_actions"]
-                    if c["status"] != "verified"
+                    if c["status"] not in ("verified", "closed")
                 ),
             }
         )
@@ -111,14 +111,41 @@ def main() -> None:
     if capas:
         capa_df = pd.DataFrame(capas).sort_values("due_date")
         st.dataframe(capa_df, use_container_width=True, hide_index=True)
-        # lifecycle state counts — verified CAPAs are closed, not open
+        # lifecycle state counts — verified/closed CAPAs are done, not open
         status_counts = capa_df["status"].value_counts().to_dict()
         st.caption(
             " · ".join(f"{status}: {count}" for status, count in status_counts.items())
-            + " — verified = closed (excluded from open counts)"
+            + " — verified/closed = excluded from open counts"
         )
     else:
         st.info("No corrective actions were raised.")
+
+    # Insights (alerts + trends) from run_pipeline's companion payload
+    insights_path = json_path.parent / "insights.json"
+    if insights_path.exists():
+        insights = json.loads(insights_path.read_text())
+        if insights.get("alerts"):
+            st.subheader("Alerts")
+            alert_rows = [
+                {"severity": a["severity"], "supplier": a["supplier_id"],
+                 "detail": a["detail"]}
+                for a in insights["alerts"][:20]  # bounded: worst first
+            ]
+            st.dataframe(pd.DataFrame(alert_rows), use_container_width=True,
+                         hide_index=True)
+        trends = insights.get("trends") or {}
+        if trends:
+            st.subheader("Supplier trends")
+            trend_rows = [
+                {"supplier": sid, "previous": t["previous"]["band"],
+                 "latest": t["latest"]["band"], "direction": t["direction"],
+                 "delta": round(t["delta"], 1)}
+                for sid, t in trends.items()
+            ]
+            st.dataframe(
+                pd.DataFrame(trend_rows).sort_values("delta", ascending=False),
+                use_container_width=True, hide_index=True,
+            )
 
 
 if __name__ == "__main__":

@@ -30,11 +30,17 @@ def _guard_transition(action: CorrectiveAction, target: CorrectiveActionStatus) 
 
 
 def start(action: CorrectiveAction, *, note: str, clock: Clock) -> CorrectiveAction:
-    """OPEN -> IN_PROGRESS, recording the first progress step."""
-    _guard_transition(action, CorrectiveActionStatus.IN_PROGRESS)
-    if action.status is not CorrectiveActionStatus.OPEN:
-        msg = f"cannot start a {action.status.value} CAPA"
+    """OPEN -> IN_PROGRESS, recording the first progress step. Idempotent:
+    starting an already-IN_PROGRESS CAPA appends the note and keeps the
+    state — a UI double-click must never crash the caller."""
+    if action.status is CorrectiveActionStatus.VERIFIED:
+        _raise_terminal()
+    if action.status is CorrectiveActionStatus.RESOLVED:
+        msg = "cannot start a resolved CAPA — verify it instead"
         raise ValueError(msg)
+    if action.status is CorrectiveActionStatus.IN_PROGRESS:
+        entry = ProgressEntry(kind="note", note=note, at=clock.now_datetime())
+        return replace(action, progress_log=(*action.progress_log, entry))
     entry = ProgressEntry(kind="started", note=note, at=clock.now_datetime())
     return replace(action, status=CorrectiveActionStatus.IN_PROGRESS,
                    progress_log=(*action.progress_log, entry))
@@ -63,6 +69,11 @@ def mark_resolved(action: CorrectiveAction, *, note: str, clock: Clock) -> Corre
                    resolved_at=clock.now_datetime())
 
 
+def _raise_terminal() -> None:
+    msg = "verified CAPAs are closed — no further transitions"
+    raise ValueError(msg)
+
+
 def verify(
     action: CorrectiveAction,
     *,
@@ -72,11 +83,10 @@ def verify(
 ) -> CorrectiveAction:
     """RESOLVED -> VERIFIED (auditor confirmed; terminal) or RESOLVED ->
     IN_PROGRESS (rejected: reopened, progress preserved)."""
+    if action.status is CorrectiveActionStatus.VERIFIED:
+        _raise_terminal()  # the terminal guard outranks argument validation
     if outcome not in ("verified", "rejected"):
         msg = f"outcome must be 'verified' or 'rejected', got {outcome!r}"
-        raise ValueError(msg)
-    if action.status is CorrectiveActionStatus.VERIFIED:
-        msg = "verified CAPAs are closed — no further transitions"
         raise ValueError(msg)
     if action.status is not CorrectiveActionStatus.RESOLVED:
         msg = f"only resolved CAPAs can be verified, got {action.status.value}"
