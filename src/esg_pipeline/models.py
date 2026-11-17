@@ -160,6 +160,15 @@ class CorrectiveAction:
 
 
 @dataclass(frozen=True, slots=True)
+class AuditSummary:
+    """One point in a supplier's audit history (trend input)."""
+
+    audit_date: date
+    total: float
+    band: str
+
+
+@dataclass(frozen=True, slots=True)
 class SupplierRiskRecord:
     """Everything the pipeline knows about one supplier after processing."""
 

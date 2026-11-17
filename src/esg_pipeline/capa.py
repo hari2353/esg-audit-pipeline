@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Protocol
 
 from esg_pipeline.models import (
+    AuditSummary,
     CorrectiveAction,
     CorrectiveActionStatus,
     FindingSeverity,
@@ -125,12 +126,24 @@ class InMemoryAuditRepository:
 
     def __init__(self) -> None:
         self._records: dict[str, SupplierRiskRecord] = {}
+        self._history: dict[str, list[AuditSummary]] = {}
 
     def save(self, record: SupplierRiskRecord) -> None:
-        self._records[record.audit.supplier_id] = record
+        key = record.audit.supplier_id
+        self._records[key] = record
+        self._history.setdefault(key, []).append(
+            AuditSummary(
+                audit_date=record.audit.audit_date,
+                total=record.risk.total,
+                band=record.risk.band.value,
+            )
+        )
 
     def get(self, supplier_id: str) -> SupplierRiskRecord | None:
         return self._records.get(supplier_id)
+
+    def history(self, supplier_id: str) -> tuple[AuditSummary, ...]:
+        return tuple(self._history.get(supplier_id, ()))
 
     def all_records(self) -> Sequence[SupplierRiskRecord]:
         return tuple(self._records.values())
@@ -169,6 +182,13 @@ CREATE TABLE IF NOT EXISTS corrective_action (
     resolved_at TEXT,
     verified_at TEXT
 );
+CREATE TABLE IF NOT EXISTS audit_history (
+    supplier_id TEXT NOT NULL,
+    audit_date  TEXT NOT NULL,
+    total       REAL NOT NULL,
+    band        TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS audit_history_supplier ON audit_history(supplier_id, audit_date);
 CREATE TABLE IF NOT EXISTS processing_run (
     supplier_id TEXT PRIMARY KEY,
     source_file TEXT,
@@ -304,6 +324,12 @@ class SqliteAuditRepository:
                     ),
                 )
             self.connection.execute(
+                "INSERT INTO audit_history(supplier_id, audit_date, total, band)"
+                " VALUES(?,?,?,?)",
+                (a.supplier_id, a.audit_date.isoformat(), record.risk.total,
+                 record.risk.band.value),
+            )
+            self.connection.execute(
                 "INSERT INTO processing_run(supplier_id, source_file, processed_at)"
                 " VALUES(?,?,?)"
                 " ON CONFLICT(supplier_id) DO UPDATE SET"
@@ -332,6 +358,20 @@ class SqliteAuditRepository:
             (supplier_id,),
         ).fetchall()
         return _row_to_record(row, actions)
+
+    def history(self, supplier_id: str) -> tuple[AuditSummary, ...]:
+        return tuple(
+            AuditSummary(
+                audit_date=date.fromisoformat(row["audit_date"]),
+                total=row["total"],
+                band=row["band"],
+            )
+            for row in self.connection.execute(
+                "SELECT audit_date, total, band FROM audit_history"
+                " WHERE supplier_id=? ORDER BY audit_date",
+                (supplier_id,),
+            )
+        )
 
     def all_records(self) -> Sequence[SupplierRiskRecord]:
         rows = self.connection.execute(
