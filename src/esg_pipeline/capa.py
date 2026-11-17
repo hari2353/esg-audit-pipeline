@@ -23,6 +23,7 @@ from esg_pipeline.models import (
     CorrectiveAction,
     CorrectiveActionStatus,
     FindingSeverity,
+    ProgressEntry,
     RiskScore,
     SupplierAudit,
     SupplierRiskRecord,
@@ -163,7 +164,10 @@ CREATE TABLE IF NOT EXISTS corrective_action (
     description TEXT NOT NULL,
     action      TEXT NOT NULL,
     due_date    TEXT NOT NULL,
-    status      TEXT NOT NULL DEFAULT 'open'
+    status      TEXT NOT NULL DEFAULT 'open',
+    progress_log_json TEXT NOT NULL DEFAULT '[]',
+    resolved_at TEXT,
+    verified_at TEXT
 );
 CREATE TABLE IF NOT EXISTS processing_run (
     supplier_id TEXT PRIMARY KEY,
@@ -179,6 +183,18 @@ def _dt_to_json_iso(value: datetime | None) -> str:
 
 def _json_iso_to_dt(value: str) -> datetime | None:
     return datetime.fromisoformat(value) if value else None
+
+
+def _ensure_lifecycle_columns(connection: sqlite3.Connection) -> None:
+    """Older repositories lack the lifecycle columns; add them in place."""
+    existing = {row[1] for row in connection.execute("PRAGMA table_info(corrective_action)")}
+    for column, ddl in (
+        ("progress_log_json", "TEXT NOT NULL DEFAULT '[]'"),
+        ("resolved_at", "TEXT"),
+        ("verified_at", "TEXT"),
+    ):
+        if column not in existing:
+            connection.execute(f"ALTER TABLE corrective_action ADD COLUMN {column} {ddl}")
 
 
 @dataclass
@@ -200,6 +216,7 @@ class SqliteAuditRepository:
         self.connection = sqlite3.connect(self.db_path)
         self.connection.row_factory = sqlite3.Row
         self.connection.executescript(_SCHEMA)
+        _ensure_lifecycle_columns(self.connection)
         self.connection.commit()
 
     def save(self, record: SupplierRiskRecord) -> None:
@@ -265,8 +282,9 @@ class SqliteAuditRepository:
             for ca in record.corrective_actions:
                 self.connection.execute(
                     "INSERT INTO corrective_action(supplier_id, category, severity,"
-                    " description, action, due_date, status)"
-                    " VALUES(?,?,?,?,?,?,?)",
+                    " description, action, due_date, status, progress_log_json,"
+                    " resolved_at, verified_at)"
+                    " VALUES(?,?,?,?,?,?,?,?,?,?)",
                     (
                         ca.supplier_id,
                         ca.category,
@@ -275,6 +293,14 @@ class SqliteAuditRepository:
                         ca.action,
                         ca.due_date.isoformat(),
                         ca.status.value,
+                        json.dumps(
+                            [
+                                {"kind": e.kind, "note": e.note, "at": e.at.isoformat()}
+                                for e in ca.progress_log
+                            ]
+                        ),
+                        ca.resolved_at.isoformat() if ca.resolved_at else None,
+                        ca.verified_at.isoformat() if ca.verified_at else None,
                     ),
                 )
             self.connection.execute(
@@ -361,6 +387,18 @@ def _row_to_record(
             description=a["description"],
             action=a["action"],
             due_date=date.fromisoformat(a["due_date"]),
+            progress_log=tuple(
+                ProgressEntry(
+                    kind=e["kind"], note=e["note"], at=datetime.fromisoformat(e["at"])
+                )
+                for e in json.loads(a["progress_log_json"] or "[]")
+            ),
+            resolved_at=(
+                datetime.fromisoformat(a["resolved_at"]) if a["resolved_at"] else None
+            ),
+            verified_at=(
+                datetime.fromisoformat(a["verified_at"]) if a["verified_at"] else None
+            ),
             status=CorrectiveActionStatus(a["status"]),
         )
         for a in action_rows

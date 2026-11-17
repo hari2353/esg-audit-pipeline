@@ -29,10 +29,18 @@ class RiskBand(str, Enum):
 
 
 class CorrectiveActionStatus(str, Enum):
-    """Lifecycle state of a corrective and preventive action (CAPA)."""
+    """Lifecycle state of a corrective and preventive action (CAPA).
+
+    Sedex-CAR style: OPEN -> IN_PROGRESS (work started, progress recorded)
+    -> RESOLVED (supplier claims done) -> VERIFIED (auditor confirmed;
+    terminal). A rejected verification reopens to IN_PROGRESS — progress
+    already made is never erased.
+    """
 
     OPEN = "open"
     IN_PROGRESS = "in_progress"
+    RESOLVED = "resolved"
+    VERIFIED = "verified"
     CLOSED = "closed"
 
 
@@ -126,6 +134,16 @@ class RiskScore:
 
 
 @dataclass(frozen=True, slots=True)
+class ProgressEntry:
+    """One recorded step in a CAPA's remediation (Sedex CAR: suppliers
+    record progress and blockers; auditors verify each step)."""
+
+    kind: str  # started | note | resolved | verified | rejected
+    note: str
+    at: datetime
+
+
+@dataclass(frozen=True, slots=True)
 class CorrectiveAction:
     """A corrective and preventive action raised against a finding."""
 
@@ -136,6 +154,9 @@ class CorrectiveAction:
     action: str
     due_date: date
     status: CorrectiveActionStatus = CorrectiveActionStatus.OPEN
+    progress_log: tuple[ProgressEntry, ...] = ()
+    resolved_at: datetime | None = None
+    verified_at: datetime | None = None
 
 
 @dataclass(frozen=True, slots=True)

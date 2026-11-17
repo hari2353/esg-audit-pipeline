@@ -158,7 +158,7 @@ class DefaultPortfolioMonitor:
             if record.risk.band in (RiskBand.HIGH, RiskBand.CRITICAL):
                 attention.append(record.audit.supplier_id)
             for action in record.corrective_actions:
-                if action.status is CorrectiveActionStatus.OPEN:
+                if action.status is not CorrectiveActionStatus.VERIFIED:
                     open_capas += 1
                     if action.due_date < self._today:
                         overdue += 1
@@ -189,7 +189,7 @@ class DefaultPortfolioMonitor:
             if band in (RiskBand.HIGH.value, RiskBand.CRITICAL.value):
                 attention.append(entry["supplier_id"])
             for action in entry["corrective_actions"]:
-                if action["status"] == CorrectiveActionStatus.OPEN.value:
+                if action["status"] != CorrectiveActionStatus.VERIFIED.value:
                     open_capas += 1
                     if date_type.fromisoformat(action["due_date"]) < self._today:
                         overdue += 1
@@ -237,6 +237,12 @@ def record_to_dict(record: SupplierRiskRecord) -> dict:
             "action": a.action,
             "due_date": a.due_date.isoformat(),
             "status": a.status.value,
+            "progress_log": [
+                {"kind": e.kind, "note": e.note, "at": e.at.isoformat()}
+                for e in a.progress_log
+            ],
+            "resolved_at": a.resolved_at.isoformat() if a.resolved_at else None,
+            "verified_at": a.verified_at.isoformat() if a.verified_at else None,
         }
 
     a = record.audit
