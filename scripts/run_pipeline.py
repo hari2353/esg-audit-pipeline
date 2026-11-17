@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 
 from esg_pipeline.capa import CapaPlanner, InMemoryAuditRepository, SqliteAuditRepository
@@ -78,6 +79,36 @@ def main() -> None:
     print(f"Bands                  : {summary.band_counts}")
     print(f"Open CAPAs             : {summary.open_capas} ({summary.overdue_capas} overdue)")
     print(f"Top risk categories    : {summary.top_risk_categories}")
+
+    # Supplier trends (EcoVadis-style scorecards) — suppliers with >=2 audits
+    from esg_pipeline.trend import portfolio_trends
+
+    trends = portfolio_trends(repository)
+    if trends:
+        print()
+        print("== Supplier Trends ==")
+        for supplier_id, trend in sorted(
+            trends.items(), key=lambda kv: -kv[1].delta
+        )[:5]:
+            print(
+                f"{supplier_id}: {trend.previous.band} -> {trend.latest.band}"
+                f" ({trend.direction}, delta {trend.delta:+.1f})"
+            )
+
+    # Alerts (Avetta-style triggers) — deterministic, one per condition
+    from esg_pipeline.alerts import evaluate_alerts
+
+    alerts = evaluate_alerts(
+        [r.record for r in results],
+        today=datetime.now(tz=timezone.utc).date(),
+        history_repo=repository,
+    )
+    if alerts:
+        print()
+        print("== Alerts ==")
+        order = {"critical": 0, "warning": 1, "info": 2}
+        for alert in sorted(alerts, key=lambda a: order[a.severity]):
+            print(f"[{alert.severity.upper():8}] {alert.supplier_id}: {alert.detail}")
     print(f"Needs attention        : {summary.suppliers_requiring_attention}")
 
     if failed:

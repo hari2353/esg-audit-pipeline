@@ -86,7 +86,8 @@ def main() -> None:
                 "band": r["risk"]["band"],
                 "findings": len(r["findings"]),
                 "open_capas": sum(
-                    1 for c in r["corrective_actions"] if c["status"] == "open"
+                    1 for c in r["corrective_actions"]
+                    if c["status"] != "verified"
                 ),
             }
         )
@@ -110,6 +111,12 @@ def main() -> None:
     if capas:
         capa_df = pd.DataFrame(capas).sort_values("due_date")
         st.dataframe(capa_df, use_container_width=True, hide_index=True)
+        # lifecycle state counts — verified CAPAs are closed, not open
+        status_counts = capa_df["status"].value_counts().to_dict()
+        st.caption(
+            " · ".join(f"{status}: {count}" for status, count in status_counts.items())
+            + " — verified = closed (excluded from open counts)"
+        )
     else:
         st.info("No corrective actions were raised.")
 

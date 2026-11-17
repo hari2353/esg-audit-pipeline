@@ -54,6 +54,9 @@ synthetic audit PDFs ──▶ extraction ──▶ normalization ──▶ risk
 4. **CAPA planning** — findings become corrective actions with severity-scaled deadlines (critical: 7 days, major: 30, minor: 60) — fully deterministic via an injected clock.
 5. **Persistence** — SQLite repository with full round-trip fidelity (contract-tested), plus JSON export.
 6. **Portfolio monitoring** — band distribution, open/overdue CAPAs, top risk categories, suppliers needing attention, portfolio health.
+7. **CAPA lifecycle** (Sedex-CAR style) — open → in progress (progress steps and blockers recorded) → resolved → **verified** closure; a rejected verification reopens with the progress log intact.
+8. **Supplier trends** (EcoVadis-style scorecards) — improvement direction across each supplier's last two audits, from the append-only audit history; one audit honestly means no trend.
+9. **Alerts** (Avetta-style triggers) — overdue CAPAs (critical for zero-tolerance categories), band escalations, re-audit due dates; one alert per condition, all deterministic.
 
 ## Verified results (run locally, 12 synthetic audits, seed 42)
 
