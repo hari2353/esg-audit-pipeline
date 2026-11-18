@@ -67,7 +67,7 @@ Open CAPAs: 27 (0 overdue)
 Extraction accuracy: 12/12 audits round-trip exactly equal to ground truth
 ```
 
-**Test suite:** 93 tests (unit + contract + integration), 93% coverage, ruff + mypy clean, CI on Python 3.10/3.11/3.12 with a live end-to-end pipeline check.
+**Test suite:** 120 tests (unit + contract + integration), 92% coverage, ruff + mypy clean, CI on Python 3.10/3.11/3.12 with a live end-to-end pipeline check.
 
 ## Design (SOLID, deliberately)
 
@@ -85,7 +85,7 @@ Other deliberate choices: frozen dataclasses everywhere (immutable domain), inje
 
 ```bash
 pip install -e .[dev]                # core + tests
-pytest                              # 93 tests
+pytest                              # 120 tests
 python scripts/generate_samples.py --count 12 --out data/samples --seed 42
 python scripts/run_pipeline.py --samples data/samples --db data/audit.db --json data/results.json
 
