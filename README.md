@@ -102,6 +102,16 @@ export AZURE_DOCUMENT_INTELLIGENCE_KEY="<key>"
 python scripts/run_pipeline.py ...   # auto-detects and uses the Azure extractor
 ```
 
+## Slice evaluation (Harvard Edge DataPerf cross-pollination)
+
+`esg_pipeline.evaluation.evaluate_findings(cases, slice_by="scheme",
+min_support=3)` scores predicted audits against gold audits as
+(category, severity) finding sets. It reports micro precision/recall/F1,
+per-scheme (or per-country) slices, a macro-F1 over slices with enough
+support, and a `low_support_slices` list. Small slices stay visible but
+cannot move the headline metric — the DataPerf discipline of judging the
+data without letting one lucky example win. No LLM judge, deterministic.
+
 ## Repository layout
 
 ```
