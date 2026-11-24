@@ -242,9 +242,7 @@ class AzureDocIntelligenceExtractor:
         )
 
     def extract(self, path: Path) -> RawExtraction:
-        poller = self._client.begin_analyze_document(
-            "prebuilt-layout", path.read_bytes()
-        )
+        poller = self._client.begin_analyze_document("prebuilt-layout", path.read_bytes())
         result = poller.result()
 
         fields: dict[str, str] = {}
@@ -273,9 +271,7 @@ def _parse_joined_rows(joined_rows: list[str]) -> list[dict[str, str]]:
         if not row or _NO_FINDINGS_RE.match(row):
             continue
         tokens = row.split()
-        severity_idx = next(
-            (i for i, t in enumerate(tokens) if t.lower() in _SEVERITIES), None
-        )
+        severity_idx = next((i for i, t in enumerate(tokens) if t.lower() in _SEVERITIES), None)
         if severity_idx is None or severity_idx == 0:
             continue
         category = _category_from_text(" ".join(tokens[:severity_idx]))

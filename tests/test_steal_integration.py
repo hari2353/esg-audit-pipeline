@@ -2,6 +2,7 @@
 trend → escalation alert, and the CAPA lifecycle excluding verified
 actions from overdue alerts — over the real SQLite repository, same
 composition the pipeline runner uses."""
+
 from dataclasses import replace
 from datetime import date, datetime
 
@@ -44,32 +45,29 @@ def test_history_trend_escalation_and_verified_exclusion_end_to_end():
         assert trends["SUP-1"].band_changed is True
 
         current = repo.get("SUP-1")
-        alerts = evaluate_alerts(
-            (current,), today=date(2026, 10, 1), history_repo=repo
-        )
+        alerts = evaluate_alerts((current,), today=date(2026, 10, 1), history_repo=repo)
         kinds = {a.kind for a in alerts}
-        assert "band_escalation" in kinds      # high -> critical across the two audits
-        assert "reaudit_due" not in kinds      # latest audit 2026-08-01 is recent
-        assert "capa_overdue" in kinds         # due 2026-03-01, still open
+        assert "band_escalation" in kinds  # high -> critical across the two audits
+        assert "reaudit_due" not in kinds  # latest audit 2026-08-01 is recent
+        assert "capa_overdue" in kinds  # due 2026-03-01, still open
 
         # drive the CAPA through the lifecycle to VERIFIED
         clock = FixedClock()
         action = verify(
             mark_resolved(
                 start(current.corrective_actions[0], note="supplier began", clock=clock),
-                note="exit cleared, evidence sent", clock=clock,
+                note="exit cleared, evidence sent",
+                clock=clock,
             ),
-            outcome="verified", note="auditor confirmed on site", clock=clock,
+            outcome="verified",
+            note="auditor confirmed on site",
+            clock=clock,
         )
-        repo.save(
-            replace(current, corrective_actions=(action,))
-        )
+        repo.save(replace(current, corrective_actions=(action,)))
 
         current = repo.get("SUP-1")
-        alerts = evaluate_alerts(
-            (current,), today=date(2026, 10, 1), history_repo=repo
-        )
-        assert "capa_overdue" not in {a.kind for a in alerts}   # verified = closed
+        alerts = evaluate_alerts((current,), today=date(2026, 10, 1), history_repo=repo)
+        assert "capa_overdue" not in {a.kind for a in alerts}  # verified = closed
 
         monitor = DefaultPortfolioMonitor(today=date(2026, 10, 1))
         summary = monitor.summarize((current,))

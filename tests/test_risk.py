@@ -52,15 +52,25 @@ class TestWeightedDeductionScorer:
         from esg_pipeline.models import FindingSeverity, SupplierAudit
 
         audit = SupplierAudit(
-            supplier_id="SUP-ZT", supplier_name="Z", country="Z",
-            audit_date=date(2025, 1, 1), auditor="A", scheme="S", overall_score=70,
+            supplier_id="SUP-ZT",
+            supplier_name="Z",
+            country="Z",
+            audit_date=date(2025, 1, 1),
+            auditor="A",
+            scheme="S",
+            overall_score=70,
             findings=(Finding("child_labor", FindingSeverity.MINOR, "Records gap."),),
         )
         scorer = WeightedDeductionScorer()
         base = scorer.score(
             SupplierAudit(
-                supplier_id="SUP-ZT", supplier_name="Z", country="Z",
-                audit_date=date(2025, 1, 1), auditor="A", scheme="S", overall_score=70,
+                supplier_id="SUP-ZT",
+                supplier_name="Z",
+                country="Z",
+                audit_date=date(2025, 1, 1),
+                auditor="A",
+                scheme="S",
+                overall_score=70,
                 findings=(),
             )
         )
@@ -89,21 +99,30 @@ class TestWeightedDeductionScorer:
 
         def audit_with_score(overall: int) -> SupplierAudit:
             return SupplierAudit(
-                supplier_id="SUP-T", supplier_name="T", country="T",
-                audit_date=date(2025, 1, 1), auditor="A", scheme="S",
-                overall_score=overall, findings=(),
+                supplier_id="SUP-T",
+                supplier_name="T",
+                country="T",
+                audit_date=date(2025, 1, 1),
+                auditor="A",
+                scheme="S",
+                overall_score=overall,
+                findings=(),
             )
 
         # Band boundaries are inclusive: total <= threshold.
-        assert scorer.score(audit_with_score(100)).band is RiskBand.LOW    # 0.0
-        assert scorer.score(audit_with_score(75)).band is RiskBand.LOW     # 15.0
-        assert scorer.score(audit_with_score(70)).band is RiskBand.MEDIUM   # 18.0
-        assert scorer.score(audit_with_score(41)).band is RiskBand.HIGH     # 35.4
-        assert scorer.score(audit_with_score(0)).band is RiskBand.HIGH      # 60.0
+        assert scorer.score(audit_with_score(100)).band is RiskBand.LOW  # 0.0
+        assert scorer.score(audit_with_score(75)).band is RiskBand.LOW  # 15.0
+        assert scorer.score(audit_with_score(70)).band is RiskBand.MEDIUM  # 18.0
+        assert scorer.score(audit_with_score(41)).band is RiskBand.HIGH  # 35.4
+        assert scorer.score(audit_with_score(0)).band is RiskBand.HIGH  # 60.0
 
         critical_audit = SupplierAudit(
-            supplier_id="SUP-T2", supplier_name="T", country="T",
-            audit_date=date(2025, 1, 1), auditor="A", scheme="S",
+            supplier_id="SUP-T2",
+            supplier_name="T",
+            country="T",
+            audit_date=date(2025, 1, 1),
+            auditor="A",
+            scheme="S",
             overall_score=50,
             findings=tuple(
                 Finding(c, FindingSeverity.CRITICAL, "x")

@@ -186,9 +186,7 @@ class DefaultPortfolioMonitor:
         """Aggregate over `record_to_dict` output (dashboard/JSON path)."""
         from datetime import date as date_type
 
-        bands: Counter[str] = Counter(
-            entry["risk"]["band"] for entry in entries
-        )
+        bands: Counter[str] = Counter(entry["risk"]["band"] for entry in entries)
         open_capas = 0
         overdue = 0
         category_counter: Counter[str] = Counter()
@@ -247,8 +245,7 @@ def record_to_dict(record: SupplierRiskRecord) -> dict:
             "due_date": a.due_date.isoformat(),
             "status": a.status.value,
             "progress_log": [
-                {"kind": e.kind, "note": e.note, "at": e.at.isoformat()}
-                for e in a.progress_log
+                {"kind": e.kind, "note": e.note, "at": e.at.isoformat()} for e in a.progress_log
             ],
             "resolved_at": a.resolved_at.isoformat() if a.resolved_at else None,
             "verified_at": a.verified_at.isoformat() if a.verified_at else None,

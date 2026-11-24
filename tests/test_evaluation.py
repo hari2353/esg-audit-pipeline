@@ -43,9 +43,7 @@ def test_slices_are_scored_separately_and_sorted():
     good = _audit("SMETA", (CHILD, WAGE))
     bad_gold = _audit("BSCI", (CHILD,), country="BD")
     bad_pred = _audit("BSCI", (), country="BD")
-    out = evaluate_findings(
-        [(good, good), (bad_gold, bad_pred)], min_support=1
-    )
+    out = evaluate_findings([(good, good), (bad_gold, bad_pred)], min_support=1)
     assert list(out["slices"]) == ["BSCI", "SMETA"]
     assert out["slices"]["SMETA"].f1 == 1.0
     assert out["slices"]["BSCI"].f1 == 0.0

@@ -142,11 +142,7 @@ class InMemoryAuditRepository:
         return self._records.get(supplier_id)
 
     def history(self, supplier_id: str) -> tuple[AuditSummary, ...]:
-        points = [
-            summary
-            for (sid, _), summary in self._history.items()
-            if sid == supplier_id
-        ]
+        points = [summary for (sid, _), summary in self._history.items() if sid == supplier_id]
         return tuple(sorted(points, key=lambda s: s.audit_date))
 
     def all_records(self) -> Sequence[SupplierRiskRecord]:
@@ -346,8 +342,12 @@ class SqliteAuditRepository:
                 " VALUES(?,?,?,?)"
                 " ON CONFLICT(supplier_id, audit_date) DO UPDATE SET"
                 "  total=excluded.total, band=excluded.band",
-                (a.supplier_id, a.audit_date.isoformat(), record.risk.total,
-                 record.risk.band.value),
+                (
+                    a.supplier_id,
+                    a.audit_date.isoformat(),
+                    record.risk.total,
+                    record.risk.band.value,
+                ),
             )
             self.connection.execute(
                 "INSERT INTO processing_run(supplier_id, source_file, processed_at)"
@@ -406,17 +406,13 @@ class SqliteAuditRepository:
             "SELECT * FROM corrective_action ORDER BY due_date, id"
         ).fetchall():
             all_actions.setdefault(action_row["supplier_id"], []).append(action_row)
-        return tuple(
-            _row_to_record(row, all_actions.get(row["supplier_id"], [])) for row in rows
-        )
+        return tuple(_row_to_record(row, all_actions.get(row["supplier_id"], [])) for row in rows)
 
     def close(self) -> None:
         self.connection.close()
 
 
-def _row_to_record(
-    row: sqlite3.Row, action_rows: Iterable[sqlite3.Row]
-) -> SupplierRiskRecord:
+def _row_to_record(row: sqlite3.Row, action_rows: Iterable[sqlite3.Row]) -> SupplierRiskRecord:
     from esg_pipeline.models import Finding, RiskBand, RiskFactor
 
     findings = tuple(
@@ -448,17 +444,11 @@ def _row_to_record(
             action=a["action"],
             due_date=date.fromisoformat(a["due_date"]),
             progress_log=tuple(
-                ProgressEntry(
-                    kind=e["kind"], note=e["note"], at=datetime.fromisoformat(e["at"])
-                )
+                ProgressEntry(kind=e["kind"], note=e["note"], at=datetime.fromisoformat(e["at"]))
                 for e in json.loads(a["progress_log_json"] or "[]")
             ),
-            resolved_at=(
-                datetime.fromisoformat(a["resolved_at"]) if a["resolved_at"] else None
-            ),
-            verified_at=(
-                datetime.fromisoformat(a["verified_at"]) if a["verified_at"] else None
-            ),
+            resolved_at=(datetime.fromisoformat(a["resolved_at"]) if a["resolved_at"] else None),
+            verified_at=(datetime.fromisoformat(a["verified_at"]) if a["verified_at"] else None),
             status=CorrectiveActionStatus(a["status"]),
         )
         for a in action_rows

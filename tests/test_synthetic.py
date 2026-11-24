@@ -68,6 +68,5 @@ class TestGeneration:
             profile = generate_profile(idx, seed=123)
             if profile.audit.overall_score >= 90:
                 assert all(
-                    f.severity is not FindingSeverity.CRITICAL
-                    for f in profile.audit.findings
+                    f.severity is not FindingSeverity.CRITICAL for f in profile.audit.findings
                 ), f"idx={idx} score={profile.audit.overall_score}"

@@ -4,6 +4,7 @@ suppliers mark them resolved, and only a separate VERIFICATION closes
 them (rejection reopens with progress preserved). "Open or in progress
 until resolved" was the problem Sedex set out to fix; this repo had the
 same shape — CAPAs were born open and never moved."""
+
 from datetime import date, datetime
 
 import pytest
@@ -30,8 +31,11 @@ class FixedClock:
 
 def make_action() -> CorrectiveAction:
     return CorrectiveAction(
-        supplier_id="SUP-1", category="health_safety", severity="major",
-        description="Blocked fire exit", action="Clear and mark exit route",
+        supplier_id="SUP-1",
+        category="health_safety",
+        severity="major",
+        description="Blocked fire exit",
+        action="Clear and mark exit route",
         due_date=date(2026, 9, 30),
     )
 
@@ -105,12 +109,20 @@ def test_overdue_monitor_never_counts_verified():
 
     base = _record("SUP-1")
     verified = verify(
-        mark_resolved(start(base.corrective_actions[0], note="begun", clock=CLOCK),
-                      note="done", clock=CLOCK),
-        outcome="verified", note="confirmed", clock=CLOCK)
+        mark_resolved(
+            start(base.corrective_actions[0], note="begun", clock=CLOCK), note="done", clock=CLOCK
+        ),
+        outcome="verified",
+        note="confirmed",
+        clock=CLOCK,
+    )
     record = SupplierRiskRecord(
-        audit=base.audit, risk=base.risk, corrective_actions=(verified,),
-        processed_at=base.processed_at, source_file=base.source_file)
+        audit=base.audit,
+        risk=base.risk,
+        corrective_actions=(verified,),
+        processed_at=base.processed_at,
+        source_file=base.source_file,
+    )
     monitor = DefaultPortfolioMonitor(today=date(2026, 12, 1))  # past due date
     summary = monitor.summarize((record,))
     assert summary.overdue_capas == 0
@@ -123,12 +135,20 @@ def test_lifecycle_survives_sqlite_round_trip():
 
     base = _record("SUP-1")
     evolved = verify(
-        mark_resolved(start(base.corrective_actions[0], note="begun", clock=CLOCK),
-                      note="done", clock=CLOCK),
-        outcome="rejected", note="blocked again", clock=CLOCK)
+        mark_resolved(
+            start(base.corrective_actions[0], note="begun", clock=CLOCK), note="done", clock=CLOCK
+        ),
+        outcome="rejected",
+        note="blocked again",
+        clock=CLOCK,
+    )
     record = SupplierRiskRecord(
-        audit=base.audit, risk=base.risk, corrective_actions=(evolved,),
-        processed_at=base.processed_at, source_file=base.source_file)
+        audit=base.audit,
+        risk=base.risk,
+        corrective_actions=(evolved,),
+        processed_at=base.processed_at,
+        source_file=base.source_file,
+    )
 
     for repo in (InMemoryAuditRepository(), SqliteAuditRepository(":memory:")):
         repo.save(record)

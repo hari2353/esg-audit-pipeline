@@ -55,8 +55,11 @@ class TestFindingRowParsing:
 
     def test_wrapped_description(self) -> None:
         rows = self._lines(
-            "2", "Working Hours", "Minor",
-            "Overtime records exceeded", "4 hours/week for 8 workers.",
+            "2",
+            "Working Hours",
+            "Minor",
+            "Overtime records exceeded",
+            "4 hours/week for 8 workers.",
         )
         findings = _parse_finding_rows(rows)
         assert len(findings) == 1
@@ -66,8 +69,14 @@ class TestFindingRowParsing:
 
     def test_multiple_rows(self) -> None:
         rows = self._lines(
-            "1", "Environment", "Minor", "Waste labels missing.",
-            "2", "Wages and Benefits", "Critical", "Systematic underpayment.",
+            "1",
+            "Environment",
+            "Minor",
+            "Waste labels missing.",
+            "2",
+            "Wages and Benefits",
+            "Critical",
+            "Systematic underpayment.",
         )
         findings = _parse_finding_rows(rows)
         assert [f["category"] for f in findings] == ["environment", "wages_benefits"]
@@ -75,9 +84,15 @@ class TestFindingRowParsing:
 
     def test_footer_stops_parsing(self) -> None:
         rows = self._lines(
-            "1", "Environment", "Minor", "Waste labels missing.",
+            "1",
+            "Environment",
+            "Minor",
+            "Waste labels missing.",
             "Report generated for demonstration purposes.",
-            "3", "Discrimination", "Minor", "Should not be parsed.",
+            "3",
+            "Discrimination",
+            "Minor",
+            "Should not be parsed.",
         )
         findings = _parse_finding_rows(rows)
         assert len(findings) == 1
@@ -153,9 +168,7 @@ class TestNormalizeExtraction:
     def test_bad_finding_severity_reported(self) -> None:
         raw = RawExtraction(
             fields=self._raw().fields,
-            findings=(
-                {"category": "environment", "severity": "catastrophic", "description": "x"},
-            ),
+            findings=({"category": "environment", "severity": "catastrophic", "description": "x"},),
         )
         with pytest.raises(ExtractionError, match="invalid severity"):
             normalize_extraction(raw)

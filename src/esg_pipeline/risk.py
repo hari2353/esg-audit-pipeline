@@ -79,10 +79,7 @@ class ScoringConfig:
         if missing:
             msg = f"band_thresholds missing: {sorted(b.value for b in missing)}"
             raise ValueError(msg)
-        ordered = [
-            self.band_thresholds[b]
-            for b in (RiskBand.LOW, RiskBand.MEDIUM, RiskBand.HIGH)
-        ]
+        ordered = [self.band_thresholds[b] for b in (RiskBand.LOW, RiskBand.MEDIUM, RiskBand.HIGH)]
         if ordered != sorted(ordered):
             msg = "band thresholds must be ascending low < medium < high"
             raise ValueError(msg)

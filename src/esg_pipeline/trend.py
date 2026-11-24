@@ -8,6 +8,7 @@ delta is improving. A supplier with fewer than two audits has NO trend —
 a single point cannot define one, and inventing 'stable' would be a
 fabrication.
 """
+
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Protocol
@@ -41,7 +42,10 @@ def supplier_trend(summaries) -> TrendScorecard | None:
     else:
         direction = "stable"
     return TrendScorecard(
-        latest=latest, previous=previous, delta=delta, direction=direction,
+        latest=latest,
+        previous=previous,
+        delta=delta,
+        direction=direction,
         band_changed=latest.band != previous.band,
     )
 

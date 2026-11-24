@@ -3,6 +3,7 @@ compliance statuses change') and expiry tracking, as three deterministic
 evaluations over repository state and the injected clock: overdue CAPAs
 (critical when they sit on zero-tolerance categories), band escalations
 from the audit history, and re-audit due dates."""
+
 from datetime import date, datetime, timedelta
 
 from esg_pipeline.alerts import evaluate_alerts
@@ -25,8 +26,7 @@ def _history_repo(*entries):
     hist = {}
     for supplier, points in entries:
         hist[supplier] = tuple(
-            AuditSummary(audit_date=date.fromisoformat(d), total=t, band=b)
-            for d, t, b in points
+            AuditSummary(audit_date=date.fromisoformat(d), total=t, band=b) for d, t, b in points
         )
     return StubRepo(hist)
 
@@ -34,9 +34,7 @@ def _history_repo(*entries):
 def test_overdue_capa_alerts_with_severity_by_category():
     record = _record("SUP-1")  # health_safety CAPA, due 2026-03-01
     alerts = evaluate_alerts((record,), today=TODAY, history_repo=None)
-    overdue = [
-        a for a in alerts if a.kind == "capa_overdue"
-    ]
+    overdue = [a for a in alerts if a.kind == "capa_overdue"]
     assert overdue and overdue[0].severity == "warning"  # health_safety not zero-tolerance
 
     # zero-tolerance categories (child/forced labor) escalate to critical
@@ -48,9 +46,11 @@ def test_overdue_capa_alerts_with_severity_by_category():
         record,
         corrective_actions=(
             CorrectiveAction(
-                supplier_id="SUP-1", category="child_labor",
+                supplier_id="SUP-1",
+                category="child_labor",
                 severity=FindingSeverity.CRITICAL,
-                description=" underage worker", action="remediate",
+                description=" underage worker",
+                action="remediate",
                 due_date=date(2026, 3, 1),
             ),
         ),
@@ -62,14 +62,18 @@ def test_overdue_capa_alerts_with_severity_by_category():
 def test_verified_capas_never_alert_as_overdue():
     record = _record("SUP-1")
     clock = type(
-        "C", (), {"now_date": lambda s: TODAY,
-                  "now_datetime": lambda s: datetime(2026, 3, 1)}
+        "C", (), {"now_date": lambda s: TODAY, "now_datetime": lambda s: datetime(2026, 3, 1)}
     )()
     action = verify(
-        mark_resolved(start(record.corrective_actions[0], note="b", clock=clock),
-                      note="d", clock=clock),
-        outcome="verified", note="v", clock=clock)
+        mark_resolved(
+            start(record.corrective_actions[0], note="b", clock=clock), note="d", clock=clock
+        ),
+        outcome="verified",
+        note="v",
+        clock=clock,
+    )
     from dataclasses import replace
+
     closed = replace(record, corrective_actions=(action,))
     alerts = evaluate_alerts((closed,), today=TODAY, history_repo=None)
     assert not [a for a in alerts if a.kind == "capa_overdue"]
@@ -91,15 +95,16 @@ def test_band_escalation_alert_uses_history():
 
 def test_reaudit_due_alert():
     record = _record("SUP-1")  # audit date 2025-02-10
-    alerts = evaluate_alerts((record,), today=TODAY, history_repo=None,
-                             reaudit_window_days=365)
+    alerts = evaluate_alerts((record,), today=TODAY, history_repo=None, reaudit_window_days=365)
     due = [a for a in alerts if a.kind == "reaudit_due"]
     assert due and due[0].severity == "info"
     # and a fresh audit does not alert
     from dataclasses import replace
+
     fresh = replace(record.audit, audit_date=TODAY - timedelta(days=30))
-    alerts = evaluate_alerts((replace(record, audit=fresh),), today=TODAY,
-                             history_repo=None, reaudit_window_days=365)
+    alerts = evaluate_alerts(
+        (replace(record, audit=fresh),), today=TODAY, history_repo=None, reaudit_window_days=365
+    )
     assert not [a for a in alerts if a.kind == "reaudit_due"]
 
 

@@ -35,17 +35,38 @@ from esg_pipeline.models import (
 
 _AUDIT_SCHEMES = ("SMETA", "SA8000", "BSCI", "WRAP", "SLCP")
 _COUNTRIES = (
-    "India", "Vietnam", "Bangladesh", "China", "Turkey",
-    "Mexico", "Portugal", "Indonesia", "Cambodia", "Sri Lanka",
+    "India",
+    "Vietnam",
+    "Bangladesh",
+    "China",
+    "Turkey",
+    "Mexico",
+    "Portugal",
+    "Indonesia",
+    "Cambodia",
+    "Sri Lanka",
 )
 _COMPANY_PREFIXES = (
-    "Meridian", "Apex", "Sunrise", "Global", "Pinnacle", "Orbit",
-    "Vertex", "Crestline", "Northbridge", "Silverstone",
+    "Meridian",
+    "Apex",
+    "Sunrise",
+    "Global",
+    "Pinnacle",
+    "Orbit",
+    "Vertex",
+    "Crestline",
+    "Northbridge",
+    "Silverstone",
 )
 _COMPANY_SUFFIXES = ("Textiles", "Apparels", "Manufacturing", "Industries", "Garments")
 _COMPANY_FORMS = ("Ltd.", "Inc.", "Co.", "Pvt. Ltd.", "Corp.")
 _AUDITORS = (
-    "SGS", "Intertek", "TUV Rheinland", "Bureau Veritas", "UL Solutions", "Elevate",
+    "SGS",
+    "Intertek",
+    "TUV Rheinland",
+    "Bureau Veritas",
+    "UL Solutions",
+    "Elevate",
 )
 
 _SEVERITY_WEIGHTS = (
@@ -138,9 +159,7 @@ def _pick_severity(rng: random.Random) -> FindingSeverity:
     return FindingSeverity.MINOR
 
 
-def _findings_for_score(
-    rng: random.Random, overall_score: int
-) -> tuple[Finding, ...]:
+def _findings_for_score(rng: random.Random, overall_score: int) -> tuple[Finding, ...]:
     """Generate findings consistent with the target overall score.
 
     High-scoring audits get few/minor findings; low-scoring audits get more
@@ -197,9 +216,7 @@ def generate_profile(
     overall_score = rng.randrange(38, 99)
     findings = _findings_for_score(rng, overall_score)
     if audit_date is None:
-        audit_date = date(
-            rng.randrange(2019, 2026), rng.randrange(1, 13), rng.randrange(1, 28)
-        )
+        audit_date = date(rng.randrange(2019, 2026), rng.randrange(1, 13), rng.randrange(1, 28))
     audit = SupplierAudit(
         supplier_id=_supplier_id(rng, index),
         supplier_name=_supplier_name(rng),
@@ -227,15 +244,17 @@ def _severities_table(findings: tuple[Finding, ...]) -> Table:
 
     table = Table([header, *rows], colWidths=[0.3 * inch, 1.5 * inch, 0.9 * inch, 3.6 * inch])
     table.setStyle(
-        TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#2F4F4F")),
-            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-            ("FONTSIZE", (0, 0), (-1, -1), 8),
-            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-            ("GRID", (0, 0), (-1, -1), 0.4, colors.grey),
-            ("VALIGN", (0, 0), (-1, -1), "TOP"),
-            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F5F5F5")]),
-        ])
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#2F4F4F")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                ("FONTSIZE", (0, 0), (-1, -1), 8),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("GRID", (0, 0), (-1, -1), 0.4, colors.grey),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F5F5F5")]),
+            ]
+        )
     )
     return table
 
@@ -279,11 +298,13 @@ def render_audit_pdf(profile: SyntheticProfile, out_path: Path) -> Path:
     ]
     summary = Table(summary_rows, colWidths=[1.6 * inch, 4.7 * inch])
     summary.setStyle(
-        TableStyle([
-            ("FONTSIZE", (0, 0), (-1, -1), 9),
-            ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-        ])
+        TableStyle(
+            [
+                ("FONTSIZE", (0, 0), (-1, -1), 9),
+                ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+            ]
+        )
     )
     story.append(summary)
     story.append(Paragraph("Summary of Findings", styles["SectionHead"]))

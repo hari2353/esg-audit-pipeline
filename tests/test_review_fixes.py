@@ -3,6 +3,7 @@ record appended a phantom audit-history point, flipping real
 deterioration to 'stable' and killing band-escalation alerts), the legacy
 CLOSED status treated as open, idempotent start(), alert dedup with
 counts, and the smaller spec-compliance items."""
+
 from dataclasses import replace
 from datetime import date, datetime
 
@@ -72,10 +73,14 @@ def test_start_is_idempotent_for_double_clicks():
     """Spec: a second start() appends a note, never raises — a UI
     double-click must not crash the caller."""
     record = _record("SUP-1")
-    clock = type("C", (), {
-        "now_date": lambda s: TODAY,
-        "now_datetime": lambda s: datetime(2026, 3, 1),
-    })()
+    clock = type(
+        "C",
+        (),
+        {
+            "now_date": lambda s: TODAY,
+            "now_datetime": lambda s: datetime(2026, 3, 1),
+        },
+    )()
     action = start(record.corrective_actions[0], note="begun", clock=clock)
     action = start(action, note="resumed (double-click)", clock=clock)
     assert action.status is CorrectiveActionStatus.IN_PROGRESS
@@ -90,14 +95,16 @@ def test_two_overdue_capas_same_category_one_alert_with_count():
         record,
         corrective_actions=(
             record.corrective_actions[0],
-            replace(record.corrective_actions[0],
-                    description="second blocked exit",
-                    action="clear it too"),
+            replace(
+                record.corrective_actions[0],
+                description="second blocked exit",
+                action="clear it too",
+            ),
         ),
     )
     alerts = evaluate_alerts((doubled,), today=TODAY, history_repo=None)
     overdue = [a for a in alerts if a.kind == "capa_overdue"]
-    assert len(overdue) == 1                    # one alert, but...
+    assert len(overdue) == 1  # one alert, but...
     assert "2 overdue CAPAs" in overdue[0].detail  # the count is visible
 
 
@@ -132,14 +139,22 @@ def test_terminal_guard_precedes_outcome_validation():
     """verify(verified_action, outcome='banana') must say the CAPA is
     closed, not complain about the outcome string."""
     record = _record("SUP-1")
-    clock = type("C", (), {
-        "now_date": lambda s: TODAY,
-        "now_datetime": lambda s: datetime(2026, 3, 1),
-    })()
+    clock = type(
+        "C",
+        (),
+        {
+            "now_date": lambda s: TODAY,
+            "now_datetime": lambda s: datetime(2026, 3, 1),
+        },
+    )()
     action = record.corrective_actions[0]
     from esg_pipeline.capa_lifecycle import mark_resolved
-    closed = verify(mark_resolved(start(action, note="b", clock=clock),
-                                  note="d", clock=clock),
-                    outcome="verified", note="v", clock=clock)
+
+    closed = verify(
+        mark_resolved(start(action, note="b", clock=clock), note="d", clock=clock),
+        outcome="verified",
+        note="v",
+        clock=clock,
+    )
     with pytest.raises(ValueError, match="closed"):
         verify(closed, outcome="banana", note="x", clock=clock)

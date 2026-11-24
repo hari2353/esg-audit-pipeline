@@ -3,6 +3,7 @@ over time, improvement scorecards) computed from the audit history the
 repository now keeps. A supplier with one audit has NO trend — inventing
 'stable' from a single point is a fabrication, and the dashboard must not
 do it."""
+
 from datetime import date
 
 import pytest
@@ -15,8 +16,7 @@ def summaries(*entries: tuple[str, str]) -> tuple[AuditSummary, ...]:
     """(iso-date, band) pairs; total derived from the band midpoint."""
     mid = {"low": 20.0, "medium": 45.0, "high": 70.0, "critical": 90.0}
     return tuple(
-        AuditSummary(audit_date=date.fromisoformat(d), total=mid[b], band=b)
-        for d, b in entries
+        AuditSummary(audit_date=date.fromisoformat(d), total=mid[b], band=b) for d, b in entries
     )
 
 
@@ -48,8 +48,8 @@ def test_three_audits_use_the_last_two():
     trend = supplier_trend(
         summaries(("2025-07-15", "low"), ("2026-01-15", "critical"), ("2026-07-15", "high"))
     )
-    assert trend.previous.band == "critical"     # last two, not first+last
-    assert trend.direction == "improving"        # 90 -> 70
+    assert trend.previous.band == "critical"  # last two, not first+last
+    assert trend.direction == "improving"  # 90 -> 70
 
 
 def test_entries_are_ordered_by_audit_date_not_input_order():
@@ -78,8 +78,7 @@ def test_repository_keeps_audit_history():
 
     worse = replace(second.audit, audit_date=date(2026, 8, 1))
     repo.save(
-        replace(second, audit=worse,
-                risk=replace(second.risk, total=90.0, band=Band.CRITICAL))
+        replace(second, audit=worse, risk=replace(second.risk, total=90.0, band=Band.CRITICAL))
     )
     history = repo.history("SUP-1")
     assert len(history) == 2
@@ -91,7 +90,8 @@ def test_repository_keeps_audit_history():
     # in-memory repository keeps the same contract
     mem = InMemoryAuditRepository()
     mem.save(first)
-    mem.save(replace(second, audit=worse,
-                     risk=replace(second.risk, total=90.0, band=Band.CRITICAL)))
+    mem.save(
+        replace(second, audit=worse, risk=replace(second.risk, total=90.0, band=Band.CRITICAL))
+    )
     assert len(mem.history("SUP-1")) == 2
     mem.close()

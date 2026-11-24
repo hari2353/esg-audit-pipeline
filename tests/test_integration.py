@@ -42,9 +42,7 @@ def pipeline_run(tmp_path: Path):
     )
     results = pipeline.process_documents(sorted(samples.glob("*.pdf")))
     JsonReportExporter(json_path).export([r.record for r in results])
-    summary = DefaultPortfolioMonitor(today=date(2026, 9, 2)).summarize(
-        [r.record for r in results]
-    )
+    summary = DefaultPortfolioMonitor(today=date(2026, 9, 2)).summarize([r.record for r in results])
     repo.close()
     return {"results": results, "db": db_path, "json": json_path, "summary": summary}
 

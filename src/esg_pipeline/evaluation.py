@@ -4,6 +4,7 @@ Cross-pollinated from harvard-edge/dataperf-speech-example: hold the model
 fixed and judge the data, but report every slice with its support so a small
 slice cannot masquerade as a reliable win.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -91,9 +92,7 @@ def evaluate_findings(
 
     return {
         "micro": micro,
-        "macro_f1": round(
-            sum(s.f1 for s in reliable) / len(reliable), 4
-        ) if reliable else 0.0,
+        "macro_f1": round(sum(s.f1 for s in reliable) / len(reliable), 4) if reliable else 0.0,
         "slices": slices,
         "low_support_slices": sorted(s.name for s in slices.values() if s.low_support),
     }

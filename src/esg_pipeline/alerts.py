@@ -15,6 +15,7 @@ evaluations over repository state and an injected reference date:
 
 No wall clock, no network, one alert per condition — never duplicates.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -90,7 +91,9 @@ def evaluate_alerts(
             )
             earliest = min(a.due_date for a in actions)
             emit(
-                "capa_overdue", supplier_id, category,
+                "capa_overdue",
+                supplier_id,
+                category,
                 f"{len(actions)} overdue CAPA{'s' if len(actions) != 1 else ''}"
                 f" in {category}, earliest due {earliest.isoformat()}"
                 f" (status {actions[0].status.value})",
@@ -101,11 +104,12 @@ def evaluate_alerts(
             if (
                 trend is not None
                 and trend.band_changed
-                and BAND_RANK.get(trend.latest.band, -1)
-                > BAND_RANK.get(trend.previous.band, -1)
+                and BAND_RANK.get(trend.latest.band, -1) > BAND_RANK.get(trend.previous.band, -1)
             ):
                 emit(
-                    "band_escalation", supplier_id, "band",
+                    "band_escalation",
+                    supplier_id,
+                    "band",
                     f"band moved {trend.previous.band} -> {trend.latest.band}"
                     f" (total {trend.previous.total:.1f} -> {trend.latest.total:.1f})",
                     "critical",
@@ -115,7 +119,9 @@ def evaluate_alerts(
             and record.audit.audit_date + timedelta(days=reaudit_window_days) < today
         ):
             emit(
-                "reaudit_due", supplier_id, "audit_age",
+                "reaudit_due",
+                supplier_id,
+                "audit_age",
                 f"last audit {record.audit.audit_date.isoformat()},"
                 f" older than {reaudit_window_days} days",
                 "info",
@@ -138,7 +144,9 @@ def build_insights(
 
     records = list(records)
     alerts = evaluate_alerts(
-        records, today=today, history_repo=repository,
+        records,
+        today=today,
+        history_repo=repository,
         reaudit_window_days=reaudit_window_days,
     )
     order = {"critical": 0, "warning": 1, "info": 2}
@@ -146,12 +154,12 @@ def build_insights(
     return {
         "alerts": [
             {
-                "kind": a.kind, "supplier_id": a.supplier_id,
-                "detail": a.detail, "severity": a.severity,
+                "kind": a.kind,
+                "supplier_id": a.supplier_id,
+                "detail": a.detail,
+                "severity": a.severity,
             }
             for a in sorted(alerts, key=lambda a: order[a.severity])
         ],
-        "trends": {
-            supplier_id: asdict(trend) for supplier_id, trend in trends.items()
-        },
+        "trends": {supplier_id: asdict(trend) for supplier_id, trend in trends.items()},
     }

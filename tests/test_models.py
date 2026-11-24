@@ -47,17 +47,27 @@ class TestSupplierAudit:
     def test_score_bounds_enforced(self, clean_audit: SupplierAudit) -> None:
         with pytest.raises(ValueError, match="overall_score"):
             SupplierAudit(
-                supplier_id="X", supplier_name="Y", country="Z",
-                audit_date=date(2025, 1, 1), auditor="A", scheme="S",
-                overall_score=101, findings=(),
+                supplier_id="X",
+                supplier_name="Y",
+                country="Z",
+                audit_date=date(2025, 1, 1),
+                auditor="A",
+                scheme="S",
+                overall_score=101,
+                findings=(),
             )
 
     def test_empty_supplier_id_rejected(self, clean_audit: SupplierAudit) -> None:
         with pytest.raises(ValueError, match="supplier_id"):
             SupplierAudit(
-                supplier_id="  ", supplier_name="Y", country="Z",
-                audit_date=date(2025, 1, 1), auditor="A", scheme="S",
-                overall_score=50, findings=(),
+                supplier_id="  ",
+                supplier_name="Y",
+                country="Z",
+                audit_date=date(2025, 1, 1),
+                auditor="A",
+                scheme="S",
+                overall_score=50,
+                findings=(),
             )
 
 

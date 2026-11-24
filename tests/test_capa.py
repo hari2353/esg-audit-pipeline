@@ -22,11 +22,13 @@ class TestCapaPolicy:
 
     def test_due_days_must_be_positive(self) -> None:
         with pytest.raises(ValueError, match="positive"):
-            CapaPolicy(due_days_by_severity={
-                FindingSeverity.MINOR: 0,
-                FindingSeverity.MAJOR: 30,
-                FindingSeverity.CRITICAL: 7,
-            })
+            CapaPolicy(
+                due_days_by_severity={
+                    FindingSeverity.MINOR: 0,
+                    FindingSeverity.MAJOR: 30,
+                    FindingSeverity.CRITICAL: 7,
+                }
+            )
 
     def test_action_text_mentions_category(self) -> None:
         text = CapaPolicy().action_text("child_labor", FindingSeverity.CRITICAL)
@@ -42,9 +44,9 @@ class TestCapaPlanner:
         risk = WeightedDeductionScorer().score(poor_audit)
         actions = planner.plan(poor_audit, risk)
         by_sev = {a.severity: a for a in actions}
-        assert by_sev[FindingSeverity.CRITICAL].due_date == date(2026, 9, 9)   # +7
-        assert by_sev[FindingSeverity.MAJOR].due_date == date(2026, 10, 2)     # +30
-        assert by_sev[FindingSeverity.MINOR].due_date == date(2026, 11, 1)     # +60
+        assert by_sev[FindingSeverity.CRITICAL].due_date == date(2026, 9, 9)  # +7
+        assert by_sev[FindingSeverity.MAJOR].due_date == date(2026, 10, 2)  # +30
+        assert by_sev[FindingSeverity.MINOR].due_date == date(2026, 11, 1)  # +60
 
     def test_actions_sorted_critical_first(self, poor_audit, planner: CapaPlanner) -> None:
         risk = WeightedDeductionScorer().score(poor_audit)

@@ -7,6 +7,7 @@ Every transition takes the injected clock — no wall time in library code.
 All functions are pure: they return a NEW frozen CorrectiveAction via
 dataclasses.replace.
 """
+
 from dataclasses import replace
 from datetime import date, datetime
 from typing import Protocol
@@ -42,8 +43,11 @@ def start(action: CorrectiveAction, *, note: str, clock: Clock) -> CorrectiveAct
         entry = ProgressEntry(kind="note", note=note, at=clock.now_datetime())
         return replace(action, progress_log=(*action.progress_log, entry))
     entry = ProgressEntry(kind="started", note=note, at=clock.now_datetime())
-    return replace(action, status=CorrectiveActionStatus.IN_PROGRESS,
-                   progress_log=(*action.progress_log, entry))
+    return replace(
+        action,
+        status=CorrectiveActionStatus.IN_PROGRESS,
+        progress_log=(*action.progress_log, entry),
+    )
 
 
 def record_progress(action: CorrectiveAction, *, note: str, clock: Clock) -> CorrectiveAction:
@@ -64,9 +68,12 @@ def mark_resolved(action: CorrectiveAction, *, note: str, clock: Clock) -> Corre
         msg = "CAPA is already resolved — verify it instead"
         raise ValueError(msg)
     entry = ProgressEntry(kind="resolved", note=note, at=clock.now_datetime())
-    return replace(action, status=CorrectiveActionStatus.RESOLVED,
-                   progress_log=(*action.progress_log, entry),
-                   resolved_at=clock.now_datetime())
+    return replace(
+        action,
+        status=CorrectiveActionStatus.RESOLVED,
+        progress_log=(*action.progress_log, entry),
+        resolved_at=clock.now_datetime(),
+    )
 
 
 def _raise_terminal() -> None:
@@ -94,9 +101,15 @@ def verify(
     at = clock.now_datetime()
     if outcome == "verified":
         entry = ProgressEntry(kind="verified", note=note, at=at)
-        return replace(action, status=CorrectiveActionStatus.VERIFIED,
-                       progress_log=(*action.progress_log, entry),
-                       verified_at=at)
+        return replace(
+            action,
+            status=CorrectiveActionStatus.VERIFIED,
+            progress_log=(*action.progress_log, entry),
+            verified_at=at,
+        )
     entry = ProgressEntry(kind="rejected", note=note, at=at)
-    return replace(action, status=CorrectiveActionStatus.IN_PROGRESS,
-                   progress_log=(*action.progress_log, entry))
+    return replace(
+        action,
+        status=CorrectiveActionStatus.IN_PROGRESS,
+        progress_log=(*action.progress_log, entry),
+    )

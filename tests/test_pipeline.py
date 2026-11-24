@@ -157,8 +157,16 @@ class TestJsonExport:
     def test_record_to_dict_shape(self) -> None:
         d = record_to_dict(_record("SUP-Z"))
         for key in (
-            "supplier_id", "supplier_name", "country", "audit_date", "scheme",
-            "overall_score", "findings", "risk", "corrective_actions", "processed_at",
+            "supplier_id",
+            "supplier_name",
+            "country",
+            "audit_date",
+            "scheme",
+            "overall_score",
+            "findings",
+            "risk",
+            "corrective_actions",
+            "processed_at",
         ):
             assert key in d, f"missing {key}"
         for key in ("total", "band", "factors"):
