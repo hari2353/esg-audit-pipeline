@@ -57,6 +57,11 @@ _SEVERITIES = {"minor", "major", "critical"}
 _NO_FINDINGS_RE = re.compile(r"^(none identified|no non-?compliances)", re.IGNORECASE)
 
 _FOOTER_RE = re.compile(r"^report generated", re.IGNORECASE)
+_ROW_RE = re.compile(
+    r"^(?P<idx>\d+|-)\s+(?P<cat>[A-Za-z][A-Za-z /]+?)\s+"
+    r"(?P<sev>minor|major|critical)\s+(?P<desc>.+)$",
+    re.IGNORECASE,
+)
 
 _CATEGORY_ALIASES: dict[str, str] = {
     "child labor": "child_labor",
@@ -118,10 +123,19 @@ def _parse_finding_rows(lines: list[str]) -> list[dict[str, str]]:
     findings: list[dict[str, str]] = []
     try:
         header_idx = next(
-            i for i, line in enumerate(lines) if line.strip().lower() == "description"
+            i
+            for i, line in enumerate(lines)
+            if "description" in line.strip().lower()
+            and ("category" in line.strip().lower() or "severity" in line.strip().lower())
         )
     except StopIteration:
-        return findings
+        # Fall back to any line containing "description".
+        try:
+            header_idx = next(
+                i for i, line in enumerate(lines) if "description" in line.strip().lower()
+            )
+        except StopIteration:
+            return findings
 
     i = header_idx + 1
     n = len(lines)
@@ -129,6 +143,25 @@ def _parse_finding_rows(lines: list[str]) -> list[dict[str, str]]:
         line = lines[i].strip()
         if not line or _FOOTER_RE.match(line):
             break
+        # Single-line row: "1 Category Severity Description..." (pypdf layout).
+        row_match = _ROW_RE.match(line)
+        if row_match:
+            try:
+                category = _category_from_text(row_match.group("cat").strip())
+            except ExtractionError:
+                i += 1
+                continue
+            severity = row_match.group("sev").lower()
+            if severity not in _SEVERITIES:
+                i += 1
+                continue
+            description = row_match.group("desc").strip()
+            if description:
+                findings.append(
+                    {"category": category, "severity": severity, "description": description}
+                )
+            i += 1
+            continue
         # Optional leading row index ("3" or "-").
         if line.isdigit() or line == "-":
             i += 1
